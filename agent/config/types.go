@@ -85,6 +85,14 @@ type Config struct {
 	// sent to the ECS telemetry endpoint
 	DisableMetrics bool
 
+	// StreamMetrics configures whether metrics are constantly streamed for each container or
+	// polled on interval instead.
+	StreamMetrics bool
+
+	// PollingMetricsWaitDuration configures how long a container should wait before polling metrics
+	// again when StreamMetrics is set to false
+	PollingMetricsWaitDuration time.Duration
+
 	// ReservedMemory specifies the amount of memory (in MB) to reserve for things
 	// other than containers managed by ECS
 	ReservedMemory uint16
