@@ -54,6 +54,10 @@ const (
 	// clean up task's containers.
 	DefaultTaskCleanupWaitDuration = 3 * time.Hour
 
+	// DefaultPollingMetricsWaitDuration specifies the default value for polling metrics wait duration
+	// This is only used when PollMetrics is set to true
+	DefaultPollingMetricsWaitDuration = 15 * time.Second
+
 	// defaultDockerStopTimeout specifies the value for container stop timeout duration
 	defaultDockerStopTimeout = 30 * time.Second
 
@@ -72,6 +76,14 @@ const (
 	// minimumTaskCleanupWaitDuration specifies the minimum duration to wait before cleaning up
 	// a task's container. This is used to enforce sane values for the config.TaskCleanupWaitDuration field.
 	minimumTaskCleanupWaitDuration = 1 * time.Minute
+
+	// minimumPollingMetricsWaitDuration specifies the minimum duration to wait before polling for new stats
+	// from docker. This is only used when PollMetrics is set to true
+	minimumPollingMetricsWaitDuration = 1 * time.Second
+
+	// maximumPollingMetricsWaitDuration specifies the maximum duration to wait before polling for new stats
+	// from docker. This is only used when PollMetrics is set to true
+	maximumPollingMetricsWaitDuration = 20 * time.Second
 
 	// minimumDockerStopTimeout specifies the minimum value for docker StopContainer API
 	minimumDockerStopTimeout = 1 * time.Second
@@ -267,6 +279,20 @@ func (cfg *Config) validateAndOverrideBounds() error {
 		cfg.TaskMetadataBurstRate = DefaultTaskMetadataBurstRate
 	}
 
+	// check the PollMetrics specific configurations
+	if cfg.PollMetrics {
+
+		if cfg.PollingMetricsWaitDuration < minimumPollingMetricsWaitDuration {
+			seelog.Warnf("Invalid value for polling metrics wait duration, will be overridden with the default value: %s. Parsed value: %v, minimum value: %v.", DefaultPollingMetricsWaitDuration.String(), cfg.PollingMetricsWaitDuration, minimumPollingMetricsWaitDuration)
+			cfg.PollingMetricsWaitDuration = DefaultPollingMetricsWaitDuration
+		}
+
+		if cfg.PollingMetricsWaitDuration > maximumPollingMetricsWaitDuration {
+			seelog.Warnf("Invalid value for polling metrics wait duration, will be overridden with the default value: %s. Parsed value: %v, maximum value: %v.", DefaultPollingMetricsWaitDuration.String(), cfg.PollingMetricsWaitDuration, maximumPollingMetricsWaitDuration)
+			cfg.PollingMetricsWaitDuration = DefaultPollingMetricsWaitDuration
+		}
+	}
+
 	cfg.platformOverrides()
 
 	return nil
@@ -387,6 +413,8 @@ func environmentConfig() (Config, error) {
 		UpdatesEnabled:                   utils.ParseBool(os.Getenv("ECS_UPDATES_ENABLED"), false),
 		UpdateDownloadDir:                os.Getenv("ECS_UPDATE_DOWNLOAD_DIR"),
 		DisableMetrics:                   utils.ParseBool(os.Getenv("ECS_DISABLE_METRICS"), false),
+		PollMetrics:                      utils.ParseBool(os.Getenv("ECS_POLL_METRICS"), false),
+		PollingMetricsWaitDuration:       parseEnvVariableDuration("ECS_POLLING_METRICS_WAIT_DURATION"),
 		ReservedMemory:                   parseEnvVariableUint16("ECS_RESERVED_MEMORY"),
 		AvailableLoggingDrivers:          parseAvailableLoggingDrivers(),
 		PrivilegedDisabled:               utils.ParseBool(os.Getenv("ECS_DISABLE_PRIVILEGED"), false),
@@ -439,6 +467,8 @@ func (cfg *Config) String() string {
 			"AuthType: %v, "+
 			"UpdatesEnabled: %v, "+
 			"DisableMetrics: %v, "+
+			"PollMetrics: %v, "+
+			"PollingMetricsWaitDuration: %v, "+
 			"ReservedMem: %v, "+
 			"TaskCleanupWaitDuration: %v, "+
 			"DockerStopTimeout: %v, "+
@@ -452,6 +482,8 @@ func (cfg *Config) String() string {
 		cfg.EngineAuthType,
 		cfg.UpdatesEnabled,
 		cfg.DisableMetrics,
+		cfg.PollMetrics,
+		cfg.PollingMetricsWaitDuration,
 		cfg.ReservedMemory,
 		cfg.TaskCleanupWaitDuration,
 		cfg.DockerStopTimeout,
