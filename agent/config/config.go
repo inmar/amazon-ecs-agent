@@ -54,7 +54,8 @@ const (
 	// clean up task's containers.
 	DefaultTaskCleanupWaitDuration = 3 * time.Hour
 
-
+	// DefaultPollingMetricsWaitDuration specifies the default value for polling metrics wait duration
+	// This is only used when StreamMetrics is set to false
 	DefaultPollingMetricsWaitDuration = 15 * time.Second
 
 	// defaultDockerStopTimeout specifies the value for container stop timeout duration
@@ -76,7 +77,13 @@ const (
 	// a task's container. This is used to enforce sane values for the config.TaskCleanupWaitDuration field.
 	minimumTaskCleanupWaitDuration = 1 * time.Minute
 
+	// minimumPollingMetricsWaitDuration specifies the minimum duration to wait before polling for new stats
+	// from docker. This is only used when StreamMetrics is set to false
 	minimumPollingMetricsWaitDuration = 1 * time.Second
+
+	// maximumPollingMetricsWaitDuration specifies the maximum duration to wait before polling for new stats
+	// from docker. This is only used when StreamMetrics is set to false
+	maximumPollingMetricsWaitDuration = 60 * time.Second
 
 	// minimumDockerStopTimeout specifies the minimum value for docker StopContainer API
 	minimumDockerStopTimeout = 1 * time.Second
@@ -272,8 +279,8 @@ func (cfg *Config) validateAndOverrideBounds() error {
 		cfg.TaskMetadataBurstRate = DefaultTaskMetadataBurstRate
 	}
 
-	if cfg.PollingMetricsWaitDuration < minimumPollingMetricsWaitDuration {
-		seelog.Warnf("Invalid value for polling metrics wait duration, will be overridden with the default value: %s. Parsed value: %v, minimum value: %v.", DefaultPollingMetricsWaitDuration.String(), cfg.PollingMetricsWaitDuration, minimumPollingMetricsWaitDuration)
+	if cfg.PollingMetricsWaitDuration < minimumPollingMetricsWaitDuration || cfg.PollingMetricsWaitDuration > maximumPollingMetricsWaitDuration {
+		seelog.Warnf("Invalid value for polling metrics wait duration, will be overridden with the default value: %s. Parsed value: %v, minimum value: %v, maximum value: %v.", DefaultPollingMetricsWaitDuration.String(), cfg.PollingMetricsWaitDuration, minimumPollingMetricsWaitDuration, maximumPollingMetricsWaitDuration)
 		cfg.PollingMetricsWaitDuration = DefaultPollingMetricsWaitDuration
 	}
 
